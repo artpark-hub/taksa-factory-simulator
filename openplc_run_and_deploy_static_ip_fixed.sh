@@ -36,7 +36,7 @@ fi
 echo "Gateway: $GATEWAY"
 
 # Add the static route
-route add default gw $GATEWAY
+route add default gw "$GATEWAY"
 if [ $? -ne 0 ]; then
     echo "Error: Failed to add default gateway" 1>&2  # Redirect error message to stderr
     exit 1
