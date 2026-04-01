@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# Review note: non-functional update for PR visibility (2026-04-01).
 
 usage() {
   cat <<USAGE
