@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # This script is used to run and deploy using a static IP configuration.
 # Review Comments by sandeepb-cmyk:
