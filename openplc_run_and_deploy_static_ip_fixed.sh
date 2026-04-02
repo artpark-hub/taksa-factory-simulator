@@ -9,8 +9,8 @@ Example: $0 10.10.10.1 /home/plc-sim/Program1/program.zip
 Environment overrides:
   COMPOSE_FILE   Path to docker-compose yaml (default: docker-compose.yaml)
   USER_NAME      OpenPLC username (default: admin)
-  PASSWORD       OpenPLC password (default: admin123)
-  INSECURE       1 to use curl -k (default: 1)
+  PASSWORD       OpenPLC password (required)
+  INSECURE       1 to use curl -k (default: 0)
   TIMEOUT_SEC    Compilation timeout seconds (default: 300)
   POLL_SEC       Poll interval seconds (default: 1)
 USAGE
@@ -21,16 +21,43 @@ if [[ $# -ne 2 ]]; then
   exit 1
 fi
 
+is_valid_ipv4() {
+  local ip="$1"
+  local o1 o2 o3 o4 octet
+
+  [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+
+  IFS='.' read -r o1 o2 o3 o4 <<< "$ip"
+  for octet in "$o1" "$o2" "$o3" "$o4"; do
+    [[ "$octet" =~ ^[0-9]{1,3}$ ]] || return 1
+    (( 10#$octet <= 255 )) || return 1
+  done
+
+  return 0
+}
+
 TARGET_IP="$1"
 ZIP_PATH="$2"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.yaml}"
 USER_NAME="${USER_NAME:-admin}"
-PASSWORD="${PASSWORD:-admin123}"
-INSECURE="${INSECURE:-1}"
+PASSWORD="${PASSWORD:-}"
+INSECURE="${INSECURE:-0}"
 TIMEOUT_SEC="${TIMEOUT_SEC:-300}"
 POLL_SEC="${POLL_SEC:-1}"
 
+if ! is_valid_ipv4 "$TARGET_IP"; then
+  echo "ERROR: target_ip must be a valid IPv4 address. Got: $TARGET_IP" >&2
+  usage
+  exit 1
+fi
+
+if [[ -z "$PASSWORD" ]]; then
+  echo "ERROR: PASSWORD environment variable is required" >&2
+  exit 1
+fi
+
 if [[ "$INSECURE" == "1" ]]; then
+  echo "WARN: TLS certificate verification is disabled (INSECURE=1)" >&2
   CURL_TLS=(-sk)
 else
   CURL_TLS=(-s)
@@ -90,7 +117,11 @@ wait_http_up() {
   local ready=0
   for _ in $(seq 1 120); do
     local resp
-    resp="$(curl "${CURL_TLS[@]}" --connect-timeout 2 "$url" || true)"
+    if ! resp="$(curl "${CURL_TLS[@]}" --connect-timeout 2 "$url" 2>&1)"; then
+      echo "WARN: runtime check failed: $resp" >&2
+      sleep 1
+      continue
+    fi
     if echo "$resp" | grep -Eq 'Missing Authorization Header|Bad Authorization header|PING:OK'; then
       ready=1
       break
@@ -106,20 +137,28 @@ login() {
       -H "Content-Type: application/json" \
       -d "{\"username\":\"${USER_NAME}\",\"password\":\"${PASSWORD}\"}"; } || true)"
 
-  echo "Login response: ${resp}"
   ACCESS_TOKEN="$(json_get_env access_token "$resp")"
   if [[ -z "$ACCESS_TOKEN" ]]; then
     echo "ERROR: login failed" >&2
     exit 1
   fi
+  echo "Login successful"
 }
 
 echo "== target service =="
 echo "$SERVICE_NAME"
 
 echo "== removing old target container if present =="
-docker stop "$SERVICE_NAME" 2>/dev/null || true
-docker rm -f "$SERVICE_NAME" 2>/dev/null || true
+if docker ps -a --format '{{.Names}}' | grep -qx "$SERVICE_NAME"; then
+  if ! docker stop "$SERVICE_NAME" >/dev/null 2>&1; then
+    echo "ERROR: failed to stop existing container ${SERVICE_NAME}" >&2
+    exit 1
+  fi
+  if ! docker rm -f "$SERVICE_NAME" >/dev/null 2>&1; then
+    echo "ERROR: failed to remove existing container ${SERVICE_NAME}" >&2
+    exit 1
+  fi
+fi
 
 echo "== docker compose up only ${SERVICE_NAME} =="
 docker compose -f "$COMPOSE_FILE" up -d "$SERVICE_NAME"
@@ -197,9 +236,14 @@ echo "== wait for compilation =="
 START_TS="$(date +%s)"
 while true; do
   RESP="$(curl "${CURL_TLS[@]}" "${BASE_URL}/compilation-status" -H "$(auth_header)")"
-  echo "$RESP"
 
   STATUS="$(json_get_env status "$RESP")"
+  MESSAGE="$(json_get_env message "$RESP")"
+  if [[ -n "$MESSAGE" ]]; then
+    echo "Compilation status: ${STATUS:-UNKNOWN} - ${MESSAGE}"
+  else
+    echo "Compilation status: ${STATUS:-UNKNOWN}"
+  fi
   if [[ "$STATUS" == "SUCCESS" ]]; then
     echo "Compilation successful"
     break
