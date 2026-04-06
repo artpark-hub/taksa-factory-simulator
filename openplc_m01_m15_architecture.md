@@ -60,20 +60,20 @@ Use the same format for other PLCs by changing:
 
 ## Routing Setup (Laptop to Docker PLC Network)
 
-For connectivity from your laptop to 10.10.10.x (containers running on VM), add route to 10.10.10.0/24 via 172.25.60.21.
+For connectivity from your laptop to 10.10.10.x (containers running on VM), add route to 10.10.10.0/24 via <GATEWAY_IP>.
 
 ### macOS
 bash
-route -n add 10.10.10.0/24 172.25.60.21
+route -n add 10.10.10.0/24 <GATEWAY_IP>
 
 ### Linux
 bash
-route add -net 10.10.10.0/24 gw 172.25.60.21
+route add -net 10.10.10.0/24 gw <GATEWAY_IP>
 
 
 ### Windows (PowerShell)
 powershell
-New-NetRoute -DestinationPrefix "10.10.10.0/24" -NextHop "172.25.60.21" -PolicyStore PersistentStore
+New-NetRoute -DestinationPrefix "10.10.10.0/24" -NextHop "<GATEWAY_IP>" -PolicyStore PersistentStore
 
 
 ## Operations Notes
