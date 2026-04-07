@@ -3,7 +3,7 @@
 ## Purpose
 This document describes the deployment architecture for 15 PLC containers and how to deploy OpenPLC ZIP programs per machine.
 
-Reference style: `umh-factory-demo` architecture documentation.
+Reference style: "umh-factory-demo" architecture documentation.
 
 ## System Topology
 
@@ -39,14 +39,14 @@ Reference style: `umh-factory-demo` architecture documentation.
 ## Deployment Flow
 
 1. Build PLC logic in OpenPLC.
-2. Export program ZIP (`zip_machineX.zip`).
-3. Place ZIP on VM (for example in `/home/plc-sim/`).
+2. Export program ZIP (zip_machineX.zip).
+3. Place ZIP on VM (for example in /home/plc-sim/).
 4. Run deployment script against target PLC IP.
 5. Verify runtime status is `STATUS:RUNNING`.
 
 ## Script Command
 
-The updated PLC ZIP files are available for deployment (`zip_machine1.zip` onward).
+The updated PLC ZIP files are available for deployment (zip_machine1.zip onward).
 
 Example command:
 
@@ -77,7 +77,6 @@ New-NetRoute -DestinationPrefix "10.10.10.0/24" -NextHop "<GATEWAY_IP>" -PolicyS
 
 
 ## Operations Notes
-- Keep ST code same across projects; only machine-specific parameters and ZIP differ.
-- Prefer matching `zip_machineX.zip` to `openplcX` unless intentionally testing cross-load behavior.
-- If connectivity fails, validate route first, then test reachability to target `10.10.10.x`.
+- Prefer matching zip_machineX.zip to openplcX.
+- If connectivity fails, validate route first, then test reachability to target "10.10.10.x".
 
