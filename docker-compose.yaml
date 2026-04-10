@@ -1,0 +1,121 @@
+version: "3.8"
+
+networks:
+  n1:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+
+services:
+  openplc1:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc1
+    networks:
+      n1:
+        ipv4_address: 10.10.10.5
+
+  openplc2:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc2
+    networks:
+      n1:
+        ipv4_address: 10.10.10.6
+
+  openplc3:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc3
+    networks:
+      n1:
+        ipv4_address: 10.10.10.7
+
+  openplc4:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc4
+    networks:
+      n1:
+        ipv4_address: 10.10.10.8
+
+  openplc5:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc5
+    networks:
+      n1:
+        ipv4_address: 10.10.10.9
+  
+  openplc6:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc6
+    networks:
+      n1:
+        ipv4_address: 10.10.10.10
+
+  openplc7:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc7
+    networks:
+      n1:
+        ipv4_address: 10.10.10.11
+
+  openplc8:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc8
+    networks:
+      n1:
+        ipv4_address: 10.10.10.12
+
+  openplc9:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc9
+    networks:
+      n1:
+        ipv4_address: 10.10.10.13
+
+  openplc10:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc10
+    networks:
+      n1:
+        ipv4_address: 10.10.10.14
+  
+  openplc11:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc11
+    networks:
+      n1:
+        ipv4_address: 10.10.10.15
+
+  openplc12:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc12
+    networks:
+      n1:
+        ipv4_address: 10.10.10.16
+  
+  openplc13:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc13
+    networks:
+      n1:
+        ipv4_address: 10.10.10.17
+
+  openplc14:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc14
+    networks:
+      n1:
+        ipv4_address: 10.10.10.18
+
+  openplc15:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc15
+    networks:
+      n1:
+        ipv4_address: 10.10.10.19
+
+  openplc16:
+    image: ghcr.io/autonomy-logic/openplc-runtime:latest
+    container_name: openplc16
+    networks:
+      n1:
+        ipv4_address: 10.10.10.20
