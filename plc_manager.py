@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import ipaddress
 import os
 import re
 import subprocess
@@ -11,6 +12,54 @@ import requests
 
 USERNAME = "openplc"
 PASSWORD = "openplc"
+
+
+def is_loopback_ip(ip):
+    if ip == "localhost":
+        return True
+
+    try:
+        return ipaddress.ip_address(ip).is_loopback
+    except ValueError:
+        return False
+
+
+def get_published_host_ports(plc_name):
+    try:
+        output = subprocess.check_output(
+            ["docker", "port", plc_name, "8080"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        )
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return set()
+
+    ports = set()
+    for line in output.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+
+        # docker port output examples:
+        # 0.0.0.0:8210
+        # [::]:8210
+        host_port = line.rsplit(":", 1)[-1]
+        if host_port.isdigit():
+            ports.add(int(host_port))
+
+    return ports
+
+
+def is_openplc_login(html):
+    html_l = html.lower()
+    has_openplc_marker = "openplc" in html_l
+    has_login_form_fields = (
+        "name='username'" in html_l
+        or 'name="username"' in html_l
+        or "name='password'" in html_l
+        or 'name="password"' in html_l
+    )
+    return has_openplc_marker and has_login_form_fields
 
 
 # ---------------------------
@@ -54,19 +103,23 @@ def down_docker(plc_name, ip, port):
 # ---------------------------
 # Resolve usable web endpoint
 # ---------------------------
-def build_base_candidates(ip, port):
+def build_base_candidates(plc_name, ip, port):
     raw = [
         f"http://{ip}:{port}",
-        f"http://127.0.0.1:{port}",
     ]
 
     # OpenPLC web UI runs on 8080 in-container. If caller passes a host-mapped
     # port (e.g. 4840), fallback candidates help reach the same service.
     if port != 8080:
-        raw.extend([
-            f"http://{ip}:8080",
-            "http://127.0.0.1:8080",
-        ])
+        raw.append(f"http://{ip}:8080")
+
+    published_ports = get_published_host_ports(plc_name)
+    allow_localhost = is_loopback_ip(ip) or port in published_ports or 8080 in published_ports
+
+    if allow_localhost:
+        raw.append(f"http://127.0.0.1:{port}")
+        if port != 8080:
+            raw.append("http://127.0.0.1:8080")
 
     seen = set()
     candidates = []
@@ -81,20 +134,24 @@ def build_base_candidates(ip, port):
 # ---------------------------
 # Wait for PLC readiness
 # ---------------------------
-def wait_for_plc(ip, port, timeout=30):
+def wait_for_plc(plc_name, ip, port, timeout=30):
     print("⏳ Waiting for PLC to become ready...")
-    candidates = build_base_candidates(ip, port)
+    candidates = build_base_candidates(plc_name, ip, port)
     deadline = time.time() + timeout
     last_error = None
+    non_openplc_candidates = set()
 
     while time.time() < deadline:
         for base in candidates:
             url = f"{base}/login"
             try:
                 r = requests.get(url, timeout=2)
-                if r.status_code == 200:
+                if r.status_code == 200 and is_openplc_login(r.text or ""):
                     print(f"✅ PLC is ready at {base}")
                     return base
+                if r.status_code == 200 and base not in non_openplc_candidates:
+                    non_openplc_candidates.add(base)
+                    print(f"⚠️ Ignoring non-OpenPLC service at {base}")
             except requests.RequestException as exc:
                 last_error = exc
 
@@ -242,7 +299,7 @@ def main():
         parser.error("--st-file is required unless --down is specified")
 
     run_docker(args.plc_name, args.ip, args.port)
-    base = wait_for_plc(args.ip, args.port)
+    base = wait_for_plc(args.plc_name, args.ip, args.port)
     deploy_plc(base, args.plc_name, args.st_file)
 
 
