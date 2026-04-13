@@ -1,0 +1,19 @@
+networks:
+  n1:
+    name: plc-network
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+
+services:
+  openplc:
+    image: tuttas/openplc_v3
+    container_name: ${SERVICE_NAME}
+    ports:
+      - "8080:8080"
+    privileged: true
+    restart: unless-stopped
+    networks:
+      n1:
+        ipv4_address: ${TARGET_IP}
