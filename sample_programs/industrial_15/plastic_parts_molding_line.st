@@ -166,9 +166,31 @@ PROGRAM plastic_parts_molding_line
   END_IF;
 
   rd_machine_status := machine_status;
-  rd_planned_time_s := DINT_TO_UINT(planned_time_s);
-  rd_runtime_time_s := DINT_TO_UINT(runtime_time_s);
-  rd_downtime_time_s := DINT_TO_UINT(downtime_time_s);
+
+  IF planned_time_s < 0 THEN
+      rd_planned_time_s := 0;
+  ELSIF planned_time_s > 65535 THEN
+      rd_planned_time_s := 65535;
+  ELSE
+      rd_planned_time_s := DINT_TO_UINT(planned_time_s);
+  END_IF;
+
+  IF runtime_time_s < 0 THEN
+      rd_runtime_time_s := 0;
+  ELSIF runtime_time_s > 65535 THEN
+      rd_runtime_time_s := 65535;
+  ELSE
+      rd_runtime_time_s := DINT_TO_UINT(runtime_time_s);
+  END_IF;
+
+  IF downtime_time_s < 0 THEN
+      rd_downtime_time_s := 0;
+  ELSIF downtime_time_s > 65535 THEN
+      rd_downtime_time_s := 65535;
+  ELSE
+      rd_downtime_time_s := DINT_TO_UINT(downtime_time_s);
+  END_IF;
+
   rd_total_count := DINT_TO_UINT(total_count);
   rd_good_count := DINT_TO_UINT(good_count);
   rd_reject_count := DINT_TO_UINT(reject_count);

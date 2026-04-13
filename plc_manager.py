@@ -12,6 +12,11 @@ import requests
 
 USERNAME = "openplc"
 PASSWORD = "openplc"
+OPENPLC_WEB_PORT = 8080
+DOCKER_COMPOSE_TIMEOUT_S = 300
+COMPILE_LOG_POLL_INTERVAL_S = 2
+COMPILE_LOG_FETCH_TIMEOUT_S = 10
+MAX_COMPILE_LOG_DELTA_CHARS = 8000
 
 
 def is_loopback_ip(ip):
@@ -27,7 +32,7 @@ def is_loopback_ip(ip):
 def get_published_host_ports(plc_name):
     try:
         output = subprocess.check_output(
-            ["docker", "port", plc_name, "8080"],
+            ["docker", "port", plc_name, str(OPENPLC_WEB_PORT)],
             text=True,
             stderr=subprocess.DEVNULL,
         )
@@ -62,6 +67,14 @@ def is_openplc_login(html):
     return has_openplc_marker and has_login_form_fields
 
 
+def is_login_form_html(html):
+    html_l = (html or "").lower()
+    return (
+        ("name='username'" in html_l or 'name="username"' in html_l)
+        and ("name='password'" in html_l or 'name="password"' in html_l)
+    )
+
+
 # ---------------------------
 # Start Docker
 # ---------------------------
@@ -74,11 +87,16 @@ def run_docker(plc_name, ip, port):
         "PORT": str(port),
     }
 
-    subprocess.run(
-        ["docker", "compose", "up", "-d"],
-        env={**os.environ, **env},
-        check=True,
-    )
+    try:
+        subprocess.run(
+            ["docker", "compose", "up", "-d"],
+            env={**os.environ, **env},
+            check=True,
+            timeout=DOCKER_COMPOSE_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        print("❌ Timed out while starting Docker Compose")
+        sys.exit(1)
 
 
 # ---------------------------
@@ -93,11 +111,16 @@ def down_docker(plc_name, ip, port):
         "PORT": str(port),
     }
 
-    subprocess.run(
-        ["docker", "compose", "down"],
-        env={**os.environ, **env},
-        check=True,
-    )
+    try:
+        subprocess.run(
+            ["docker", "compose", "down"],
+            env={**os.environ, **env},
+            check=True,
+            timeout=DOCKER_COMPOSE_TIMEOUT_S,
+        )
+    except subprocess.TimeoutExpired:
+        print("❌ Timed out while stopping Docker Compose")
+        sys.exit(1)
 
 
 # ---------------------------
@@ -110,16 +133,20 @@ def build_base_candidates(plc_name, ip, port):
 
     # OpenPLC web UI runs on 8080 in-container. If caller passes a host-mapped
     # port (e.g. 4840), fallback candidates help reach the same service.
-    if port != 8080:
-        raw.append(f"http://{ip}:8080")
+    if port != OPENPLC_WEB_PORT:
+        raw.append(f"http://{ip}:{OPENPLC_WEB_PORT}")
 
     published_ports = get_published_host_ports(plc_name)
-    allow_localhost = is_loopback_ip(ip) or port in published_ports or 8080 in published_ports
+    allow_localhost = (
+        is_loopback_ip(ip)
+        or port in published_ports
+        or OPENPLC_WEB_PORT in published_ports
+    )
 
     if allow_localhost:
         raw.append(f"http://127.0.0.1:{port}")
-        if port != 8080:
-            raw.append("http://127.0.0.1:8080")
+        if port != OPENPLC_WEB_PORT:
+            raw.append(f"http://127.0.0.1:{OPENPLC_WEB_PORT}")
 
     seen = set()
     candidates = []
@@ -192,13 +219,32 @@ def wait_for_compile(session, base, timeout=180):
     print("⏳ Waiting for compilation to finish...")
     deadline = time.time() + timeout
     last_len = 0
+    last_error = None
 
     while time.time() < deadline:
-        r = session.get(f"{base}/compilation-logs", timeout=10)
-        logs = r.text or ""
+        try:
+            r = session.get(f"{base}/compilation-logs", timeout=COMPILE_LOG_FETCH_TIMEOUT_S)
+
+            # requests follows redirects; detect auth loss explicitly
+            if r.url.rstrip("/").endswith("/login") or is_login_form_html(r.text):
+                print("❌ Lost authentication while waiting for compilation logs")
+                sys.exit(1)
+
+            r.raise_for_status()
+            logs = r.text or ""
+        except requests.RequestException as exc:
+            last_error = exc
+            time.sleep(COMPILE_LOG_POLL_INTERVAL_S)
+            continue
+
+        if len(logs) < last_len:
+            last_len = 0
 
         if len(logs) > last_len:
             delta = logs[last_len:]
+            if len(delta) > MAX_COMPILE_LOG_DELTA_CHARS:
+                delta = delta[-MAX_COMPILE_LOG_DELTA_CHARS:]
+                print("   ... log output truncated ...")
             for line in delta.splitlines():
                 line = line.strip()
                 if line:
@@ -213,9 +259,11 @@ def wait_for_compile(session, base, timeout=180):
             print("❌ Compilation failed")
             sys.exit(1)
 
-        time.sleep(1)
+        time.sleep(COMPILE_LOG_POLL_INTERVAL_S)
 
     print("❌ Compilation timed out")
+    if last_error:
+        print("Last error:", last_error)
     sys.exit(1)
 
 
