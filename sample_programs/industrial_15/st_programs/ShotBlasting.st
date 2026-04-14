@@ -17,7 +17,7 @@ VAR
     tick : DINT;
 END_VAR
 
-rand := REAL((tick * 37) MOD 100) / 100.0;
+rand := DINT_TO_REAL((tick * 37) MOD 100) / 100.0;
 tick := tick + 1;
 
 surface_cleanliness := 0.9 + (rand * 0.1);
@@ -31,3 +31,10 @@ media_usage := 4.0 + (rand * 2.0);
 turbine_health := turbine_health - 0.0003;
 
 END_PROGRAM
+
+CONFIGURATION Config0
+  RESOURCE Res0 ON PLC
+    TASK Main(INTERVAL := T#20ms, PRIORITY := 0);
+    PROGRAM Inst0 WITH Main : PLC7_SHOTBLAST;
+  END_RESOURCE
+END_CONFIGURATION

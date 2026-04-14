@@ -18,7 +18,7 @@ VAR
     tick : DINT;
 END_VAR
 
-rand := REAL((tick * 43) MOD 100) / 100.0;
+rand := DINT_TO_REAL((tick * 43) MOD 100) / 100.0;
 tick := tick + 1;
 
 IF rand < 0.02 THEN
@@ -33,3 +33,10 @@ END_IF;
 camera_health := camera_health - 0.0002;
 
 END_PROGRAM
+
+CONFIGURATION Config0
+  RESOURCE Res0 ON PLC
+    TASK Main(INTERVAL := T#20ms, PRIORITY := 0);
+    PROGRAM Inst0 WITH Main : PLC11_INSPECTION;
+  END_RESOURCE
+END_CONFIGURATION

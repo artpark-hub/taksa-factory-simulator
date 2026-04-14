@@ -19,13 +19,13 @@ VAR
     tick : DINT;
 END_VAR
 
-rand := REAL((tick * 17) MOD 100) / 100.0;
+rand := DINT_TO_REAL((tick * 17) MOD 100) / 100.0;
 tick := tick + 1;
 
-// temperature control
+
 metal_temperature := 680.0 + (rand * 50.0);
 
-// overheat
+
 IF metal_temperature > 720.0 THEN
     overheat_alarm := TRUE;
     furnace_downtime := furnace_downtime + 0.1;
@@ -36,9 +36,16 @@ END_IF;
 melt_rate := 90.0 + (rand * 20.0);
 energy_consumption := melt_rate * 4.0;
 
-// degradation
+
 refractory_health := refractory_health - 0.0003;
 
 tap_time := tap_time + 0.1;
 
 END_PROGRAM
+
+CONFIGURATION Config0
+  RESOURCE Res0 ON PLC
+    TASK Main(INTERVAL := T#20ms, PRIORITY := 0);
+    PROGRAM Inst0 WITH Main : PLC2_FURNACE;
+  END_RESOURCE
+END_CONFIGURATION

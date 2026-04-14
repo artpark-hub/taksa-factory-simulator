@@ -18,7 +18,7 @@ VAR
     tick : DINT;
 END_VAR
 
-rand := REAL((tick * 31) MOD 100) / 100.0;
+rand := DINT_TO_REAL((tick * 31) MOD 100) / 100.0;
 tick := tick + 1;
 
 temperature_profile := 480.0 + (rand * 40.0);
@@ -32,3 +32,10 @@ fuel_consumption := 250.0 + (rand * 100.0);
 heater_health := heater_health - 0.0004;
 
 END_PROGRAM
+
+CONFIGURATION Config0
+  RESOURCE Res0 ON PLC
+    TASK Main(INTERVAL := T#20ms, PRIORITY := 0);
+    PROGRAM Inst0 WITH Main : PLC6_HEATTREAT;
+  END_RESOURCE
+END_CONFIGURATION

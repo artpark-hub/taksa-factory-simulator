@@ -19,7 +19,7 @@ VAR
     tick : DINT;
 END_VAR
 
-rand := REAL((tick * 47) MOD 100) / 100.0;
+rand := DINT_TO_REAL((tick * 47) MOD 100) / 100.0;
 tick := tick + 1;
 
 thickness := 45.0 + (rand * 10.0);
@@ -31,3 +31,10 @@ END_IF;
 nozzle_health := nozzle_health - 0.0003;
 
 END_PROGRAM
+
+CONFIGURATION Config0
+  RESOURCE Res0 ON PLC
+    TASK Main(INTERVAL := T#20ms, PRIORITY := 0);
+    PROGRAM Inst0 WITH Main : PLC12_PAINT;
+  END_RESOURCE
+END_CONFIGURATION

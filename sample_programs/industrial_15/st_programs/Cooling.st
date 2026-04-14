@@ -17,7 +17,7 @@ VAR
     tick : DINT;
 END_VAR
 
-rand := REAL((tick * 29) MOD 100) / 100.0;
+rand := DINT_TO_REAL((tick * 29) MOD 100) / 100.0;
 tick := tick + 1;
 
 cooling_time := 100.0 + (rand * 40.0);
@@ -32,3 +32,10 @@ water_usage := 40.0 + (rand * 20.0);
 pump_health := pump_health - 0.0003;
 
 END_PROGRAM
+
+CONFIGURATION Config0
+  RESOURCE Res0 ON PLC
+    TASK Main(INTERVAL := T#20ms, PRIORITY := 0);
+    PROGRAM Inst0 WITH Main : PLC5_COOLING;
+  END_RESOURCE
+END_CONFIGURATION

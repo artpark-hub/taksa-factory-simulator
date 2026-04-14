@@ -20,7 +20,7 @@ VAR
     tick : DINT;
 END_VAR
 
-rand := REAL((tick * 41) MOD 100) / 100.0;
+rand := DINT_TO_REAL((tick * 41) MOD 100) / 100.0;
 tick := tick + 1;
 
 cycle_time := 100.0 + (rand * 40.0);
@@ -38,3 +38,10 @@ tool_life := tool_life - 0.001;
 spindle_energy := spindle_load * 0.8;
 
 END_PROGRAM
+
+CONFIGURATION Config0
+  RESOURCE Res0 ON PLC
+    TASK Main(INTERVAL := T#20ms, PRIORITY := 0);
+    PROGRAM Inst0 WITH Main : PLC8_CNC;
+  END_RESOURCE
+END_CONFIGURATION

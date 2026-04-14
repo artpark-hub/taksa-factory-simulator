@@ -17,7 +17,7 @@ VAR
     tick : DINT;
 END_VAR
 
-rand := REAL((tick * 61) MOD 100) / 100.0;
+rand := DINT_TO_REAL((tick * 61) MOD 100) / 100.0;
 tick := tick + 1;
 
 pressure_stability := 0.9 + (rand * 0.1);
@@ -32,3 +32,10 @@ total_energy := total_energy + (rand * 10.0);
 compressor_health := compressor_health - 0.0004;
 
 END_PROGRAM
+
+CONFIGURATION Config0
+  RESOURCE Res0 ON PLC
+    TASK Main(INTERVAL := T#20ms, PRIORITY := 0);
+    PROGRAM Inst0 WITH Main : PLC15_UTILS;
+  END_RESOURCE
+END_CONFIGURATION

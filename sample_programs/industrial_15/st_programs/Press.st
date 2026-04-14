@@ -20,7 +20,7 @@ VAR
     tick : DINT;
 END_VAR
 
-rand := REAL((tick * 23) MOD 100) / 100.0;
+rand := DINT_TO_REAL((tick * 23) MOD 100) / 100.0;
 tick := tick + 1;
 
 cycle_time := 25.0 + (rand * 10.0);
@@ -43,3 +43,10 @@ hydraulic_energy := press_load * 2.5;
 die_health := die_health - 0.0005;
 
 END_PROGRAM
+
+CONFIGURATION Config0
+  RESOURCE Res0 ON PLC
+    TASK Main(INTERVAL := T#20ms, PRIORITY := 0);
+    PROGRAM Inst0 WITH Main : PLC4_PRESS;
+  END_RESOURCE
+END_CONFIGURATION
